@@ -33,16 +33,22 @@
 			var score = 0;
 			var scoreText;
 			var bombs;
+			var music;
 
 			//Loads in assets into project
 			function preload (){
 				this.load.image("sky", "assets/sky.png");
 				this.load.image("ground", "assets/platform.png");
 				this.load.image("stars", "assets/star.png");
-				this.load.image("bomb", "assets/bomb.png");
+				this.load.image("bombs", "assets/bomb.png");
 
 				this.load.spritesheet("dude", "assets/dude.png", {frameWidth: 32, frameHeight: 48 });
 				
+				//AUDIO
+				this.load.audio('theme', [
+    				'assets/audio/highAction.ogg',
+    			    'assets/audio/highAction.mp3'
+    			]);
 			}
 
 			function create(){
@@ -67,11 +73,14 @@
 						child.setBounce(Phaser.Math.FloatBetween(0.4, 0.8));
 					} );
 
+				//BOMBs
+					bombs = this.physics.add.group();
+
 				//PLAYER
 					player =  this.physics.add.sprite(100, 500, 'dude');
 					player.setBounce(0.2);
 					player.setCollideWorldBounds(true);
-					player.body.setGravity(0, 300);
+					player.body.setGravity(0, 500);
 
 				//PLAYER ANIMATION
 					this.anims.create({
@@ -98,8 +107,11 @@
 				//COLLIDERS
 					this.physics.add.collider( player, platforms );
 					this.physics.add.collider( stars, platforms );
+					this.physics.add.collider(bombs, platforms);
 
-					this.physics.add.overlap(player, stars, collectStar, null, this)
+					this.physics.add.overlap(player, stars, collectStar, null, this);
+
+					this.physics.add.overlap(player, bombs, hitBomb, null, this);
 
 				//PLAYER EVENTS
 					cursors = this.input.keyboard.createCursorKeys();
@@ -107,6 +119,9 @@
 				//UI
 					scoreText = this.add.text(16, 16, 'score : 0', {fontSize: '32px', fill :  '#000' })
 
+				//AUDIO
+					var music = this.sound.add('theme');
+					music.play();
 			}
 
 			function update(){
@@ -129,9 +144,32 @@
 
 			function collectStar( player, stars ){
 				stars.disableBody(true, true);
-				
+
 				score += 10;
 				scoreText.setText("Score: " + score );
+
+				if( stars.countActive(true) === 0 ){
+
+					//recreate the stars
+					stars.children.iterate(function(child){
+						child.enableBody(true, child.x, 0, true, true);
+					});
+
+					var x = (player.x < 400) ? Phaser.Math.Between(400,800) : Phaser.Math.Between(0, 400);
+
+					var bomb = bombs.create(x, 16, 'bomb');
+					bomb.setBounce(1);
+					bomb.setCollideWorldBounds(true);
+					bomb.setVelocity( Phaser.Math.Between(-200,200), 20);
+					bomb.allowGravity = false;
+				}
+			}
+
+			function hitBomb(){
+				this.physics.pause();
+				player.setTint( 0xff0000 );
+				player.anims.play('turn');
+				gameOver = true;
 			}
 
 		</script>
